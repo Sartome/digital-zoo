@@ -1145,3 +1145,47 @@ footer a:hover {
     align-items: center;
     gap: 10px;
 }
+
+/* Search Box Styles */
+.search-box {
+    margin-bottom: 20px;
+}
+
+.search-form {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.search-form input[type="text"] {
+    flex: 1;
+    padding: 10px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    background-color: #FCFCFC;
+}
+
+.search-form input[type="text"]:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 5px rgba(74, 124, 89, 0.3);
+}
+
+.search-form .btn {
+    padding: 10px 20px;
+    white-space: nowrap;
+    background-color: var(--primary);
+    color: var(--light-text);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.search-form .btn:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}

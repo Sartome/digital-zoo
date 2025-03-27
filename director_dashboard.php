@@ -62,6 +62,27 @@ if($result) {
 
 if($_SERVER["REQUEST_METHOD"] == "POST") {
     if(isset($_POST['action'])) {
+        if($_POST['action'] == 'add_employee') {
+            $username = sanitize($_POST['username']);
+            $password = sanitize($_POST['password']);
+            $role = sanitize($_POST['role']);
+            $salary = floatval($_POST['salary']);
+            
+            if(empty($username) || empty($password) || empty($role)) {
+                $error_message = "Tous les champs sont obligatoires.";
+            } else {
+                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                $sql = "INSERT INTO users (username, password, role, salary) VALUES (?, ?, ?, ?)";
+                $stmt = mysqli_prepare($conn, $sql);
+                mysqli_stmt_bind_param($stmt, "sssd", $username, $hashed_password, $role, $salary);
+                
+                if(mysqli_stmt_execute($stmt)) {
+                    redirect('director_dashboard.php', 'Employé ajouté avec succès!', 'success');
+                } else {
+                    $error_message = "Erreur lors de l'ajout de l'employé.";
+                }
+            }
+        }
         if($_POST['action'] == 'add_edit') {
             $name = sanitize($_POST['name']);
             $role = sanitize($_POST['role']);
@@ -98,7 +119,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST") {
         if($_POST['action'] == 'delete' && isset($_POST['employee_id'])) {
             $employee_id = intval($_POST['employee_id']);
             
-            $sql = "DELETE FROM employees WHERE id = ?";
+            $sql = "DELETE FROM users WHERE id = ?";
             $stmt = mysqli_prepare($conn, $sql);
             mysqli_stmt_bind_param($stmt, "i", $employee_id);
             
@@ -106,6 +127,34 @@ if($_SERVER["REQUEST_METHOD"] == "POST") {
                 redirect('director_dashboard.php', 'Employé supprimé avec succès!', 'success');
             } else {
                 $error_message = "Erreur lors de la suppression de l'employé.";
+            }
+        }
+
+        if($_POST['action'] == 'edit') {
+            $employee_id = intval($_POST['employee_id']);
+            $role = sanitize($_POST['role']);
+            $salary = floatval($_POST['salary']);
+            $new_password = isset($_POST['new_password']) ? sanitize($_POST['new_password']) : '';
+            
+            if(empty($role)) {
+                $error_message = "Le rôle est obligatoire.";
+            } else {
+                if(!empty($new_password)) {
+                    $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+                    $sql = "UPDATE users SET role = ?, salary = ?, password = ? WHERE id = ?";
+                    $stmt = mysqli_prepare($conn, $sql);
+                    mysqli_stmt_bind_param($stmt, "sdsi", $role, $salary, $hashed_password, $employee_id);
+                } else {
+                    $sql = "UPDATE users SET role = ?, salary = ? WHERE id = ?";
+                    $stmt = mysqli_prepare($conn, $sql);
+                    mysqli_stmt_bind_param($stmt, "sdi", $role, $salary, $employee_id);
+                }
+                
+                if(mysqli_stmt_execute($stmt)) {
+                    redirect('director_dashboard.php', 'Employé mis à jour avec succès!', 'success');
+                } else {
+                    $error_message = "Erreur lors de la mise à jour de l'employé.";
+                }
             }
         }
     }
@@ -195,6 +244,10 @@ if(isset($_GET['view']) && is_numeric($_GET['view'])) {
                             <option value="directeur">Directeur</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label>Salaire</label>
+                        <input type="number" name="salary" step="0.01" min="0" required>
+                    </div>
                     <button type="submit" class="btn btn-primary">Ajouter</button>
                 </form>
             </div>
@@ -221,6 +274,7 @@ if(isset($_GET['view']) && is_numeric($_GET['view'])) {
                         <tr>
                             <th>Nom d'utilisateur</th>
                             <th>Role</th>
+                            <th>Salaire</th>
                             <th>Date d'ajout</th>
                             <th>Actions</th>
                         </tr>
@@ -230,6 +284,7 @@ if(isset($_GET['view']) && is_numeric($_GET['view'])) {
                         <tr>
                             <td><?php echo htmlspecialchars($user['username']); ?></td>
                             <td><?php echo htmlspecialchars($user['role']); ?></td>
+                            <td><?php echo number_format($user['salary'], 2, ',', ' '); ?> €</td>
                             <td><?php echo date('d/m/Y', strtotime($user['created_at'])); ?></td>
                             <td class="actions">
                                 <button class="btn btn-edit" onclick="editUser(<?php echo $user['id']; ?>)">
@@ -283,6 +338,10 @@ if(isset($_GET['view']) && is_numeric($_GET['view'])) {
                         <option value="directeur">Directeur</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>Salaire</label>
+                    <input type="number" name="salary" id="edit-salary" step="0.01" min="0" required>
+                </div>
                 <button type="submit" class="btn btn-primary">Enregistrer</button>
             </form>
         </div>
@@ -290,8 +349,15 @@ if(isset($_GET['view']) && is_numeric($_GET['view'])) {
 
     <script>
     function editUser(userId) {
-        document.getElementById('edit-employee-id').value = userId;
-        document.getElementById('edit-modal').style.display = 'block';
+        // Faire une requête AJAX pour obtenir les données de l'utilisateur
+        fetch('get_user.php?id=' + userId)
+            .then(response => response.json())
+            .then(user => {
+                document.getElementById('edit-employee-id').value = user.id;
+                document.getElementById('edit-role').value = user.role;
+                document.getElementById('edit-salary').value = user.salary;
+                document.getElementById('edit-modal').style.display = 'block';
+            });
     }
 
     function deleteUser(userId) {

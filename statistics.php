@@ -12,7 +12,8 @@ $stats = [
     'total_employees' => mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM users WHERE role='salarie'"))['count'],
     'species_distribution' => [],
     'gender_distribution' => [],
-    'monthly_additions' => []
+    'monthly_additions' => [],
+    'daily_additions' => []
 ];
 
 // Get species distribution
@@ -41,6 +42,17 @@ $sql = "SELECT DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as count
 $result = mysqli_query($conn, $sql);
 while($row = mysqli_fetch_assoc($result)) {
     $stats['monthly_additions'][] = $row;
+}
+
+// Get daily additions
+$sql = "SELECT DATE_FORMAT(created_at, '%Y-%m-%d') as day, COUNT(*) as count 
+        FROM animals 
+        GROUP BY day 
+        ORDER BY day DESC 
+        LIMIT 30";
+$result = mysqli_query($conn, $sql);
+while($row = mysqli_fetch_assoc($result)) {
+    $stats['daily_additions'][] = $row;
 }
 ?>
 
@@ -105,9 +117,9 @@ while($row = mysqli_fetch_assoc($result)) {
             new Chart(document.getElementById('speciesChart'), {
                 type: 'pie',
                 data: {
-                    labels: <?php echo json_encode(array_column($stats['species_distribution'], 'name')); ?>,
+                    labels: <?php echo json_encode(array_column($stats['species_distribution'], 'name') ?: []); ?>,
                     datasets: [{
-                        data: <?php echo json_encode(array_column($stats['species_distribution'], 'count')); ?>,
+                        data: <?php echo json_encode(array_column($stats['species_distribution'], 'count') ?: []); ?>,
                         backgroundColor: ['#4A7C59', '#F4A261', '#2A9D8F', '#E76F51', '#E9C46A']
                     }]
                 },
@@ -153,14 +165,14 @@ while($row = mysqli_fetch_assoc($result)) {
                 }
             });
 
-            // Graphique des ajouts mensuels
+            // Graphique des ajouts journaliers
             new Chart(document.getElementById('monthlyChart'), {
                 type: 'line',
                 data: {
-                    labels: <?php echo json_encode(array_column($stats['monthly_additions'], 'month')); ?>,
+                    labels: <?php echo json_encode(array_column($stats['daily_additions'], 'day') ?: []); ?>,
                     datasets: [{
                         label: 'Nouveaux animaux',
-                        data: <?php echo json_encode(array_column($stats['monthly_additions'], 'count')); ?>,
+                        data: <?php echo json_encode(array_column($stats['daily_additions'], 'count') ?: []); ?>,
                         borderColor: '#4A7C59',
                         tension: 0.1
                     }]
@@ -171,7 +183,18 @@ while($row = mysqli_fetch_assoc($result)) {
                         legend: { position: 'top' },
                         title: {
                             display: true,
-                            text: 'Évolution mensuelle des ajouts'
+                            text: 'Évolution journalière des ajouts'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                callback: function(value) {
+                                    return Number.isInteger(value) ? value : null;
+                                }
+                            }
                         }
                     }
                 }
